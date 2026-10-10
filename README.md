@@ -86,8 +86,16 @@ Target: the read path (`GET /products`, `GET /products/{id}/summary`).
 
 | Endpoint | VUs | p50 | p95 | Errors |
 |---|---|---|---|---|
-| GET /products | 20 | _TBD_ | _TBD_ | _TBD_ |
-| GET /products/{id}/summary | 20 | _TBD_ | _TBD_ | _TBD_ |
+| GET /products + /products/{id}/summary (mixed) | 20 | 1350ms | 2006ms | 0% (warm); 5% on cold start |
+
+Measured 2026-10-10 against the live API with 200 requests at 20 concurrent
+workers (Python harness; k6 smoke script in `loadtest/smoke.js` covers the same
+endpoints). p99 was 2064ms. Latency is dominated by Lambda cold starts: each
+concurrent execution spins up a fresh Python+boto3 environment (~1s), so p50
+tracks cold-start time under burst concurrency rather than DynamoDB (the table
+holds 3 items; scans are single-digit ms). Production mitigations, in order of
+leverage: provisioned concurrency for the read Lambda, then the ElastiCache
+layer from the design doc. Full numbers in `loadtest/results.md`.
 
 ## Project layout
 
