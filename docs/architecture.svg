@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="830" viewBox="0 0 1080 830" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="ReviewIntel system architecture diagram">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#374151"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="24" y="30" font-size="22" font-weight="bold" fill="#111827">ReviewIntel — system architecture</text>
+  <text x="24" y="54" font-size="13" fill="#6b7280">Live in us-east-1 · free-tier design · CloudFront pending AWS account verification (dashed box)</text>
+
+  <!-- Lane separators + labels -->
+  <line x1="24" y1="280" x2="1056" y2="280" stroke="#e5e7eb"/>
+  <line x1="24" y1="600" x2="1056" y2="600" stroke="#e5e7eb"/>
+  <text x="24" y="100" font-size="12" font-weight="bold" letter-spacing="2" fill="#9ca3af">SERVE</text>
+  <text x="24" y="308" font-size="12" font-weight="bold" letter-spacing="2" fill="#9ca3af">INGEST + PROCESS</text>
+  <text x="24" y="628" font-size="12" font-weight="bold" letter-spacing="2" fill="#9ca3af">OPERATE</text>
+
+  <!-- ============ LANE A: SERVE ============ -->
+  <!-- Users -->
+  <rect x="40" y="163" width="110" height="60" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="95" y="197" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">Users</text>
+
+  <!-- CloudFront (pending) -->
+  <rect x="200" y="78" width="200" height="52" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="300" y="99" text-anchor="middle" font-size="13" font-weight="bold" fill="#6b7280">CloudFront (CDN)</text>
+  <text x="300" y="117" text-anchor="middle" font-size="11" font-style="italic" fill="#9ca3af">pending account verification</text>
+  <line x1="300" y1="130" x2="300" y2="144" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+
+  <!-- React dashboard on S3 -->
+  <rect x="200" y="148" width="200" height="92" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="300" y="180" text-anchor="middle" font-size="15" font-weight="bold" fill="#111827">React dashboard</text>
+  <text x="300" y="200" text-anchor="middle" font-size="12" fill="#4b5563">S3 website hosting</text>
+  <text x="300" y="216" text-anchor="middle" font-size="11" fill="#9ca3af">(HTTP for now)</text>
+
+  <!-- API Gateway -->
+  <rect x="450" y="163" width="130" height="60" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="515" y="187" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">API Gateway</text>
+  <text x="515" y="205" text-anchor="middle" font-size="12" fill="#4b5563">REST API</text>
+
+  <!-- Read Lambda -->
+  <rect x="630" y="163" width="150" height="60" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="705" y="187" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">Read Lambda</text>
+  <text x="705" y="205" text-anchor="middle" font-size="11" fill="#4b5563">Python 3.12 · 60s cache</text>
+
+  <!-- DynamoDB (spans serve + process lanes) -->
+  <rect x="830" y="148" width="200" height="392" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="930" y="180" text-anchor="middle" font-size="16" font-weight="bold" fill="#111827">DynamoDB</text>
+  <text x="930" y="202" text-anchor="middle" font-size="12" fill="#4b5563">single table · on-demand</text>
+  <text x="930" y="224" text-anchor="middle" font-size="12" fill="#4b5563">PK = PRODUCT#&lt;id&gt;</text>
+  <text x="930" y="244" text-anchor="middle" font-size="12" fill="#4b5563">SK = REVIEW#&lt;id&gt; | SUMMARY</text>
+  <text x="930" y="266" text-anchor="middle" font-size="12" fill="#4b5563">GSI: SentimentIndex</text>
+  <text x="930" y="284" text-anchor="middle" font-size="11" fill="#9ca3af">(sentiment → SK)</text>
+
+  <!-- Lane A arrows -->
+  <line x1="150" y1="193" x2="196" y2="193" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="400" y1="193" x2="446" y2="193" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="423" y="183" text-anchor="middle" font-size="10.5" fill="#6b7280">GET /products</text>
+  <line x1="580" y1="193" x2="626" y2="193" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="780" y1="193" x2="826" y2="193" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="803" y="183" text-anchor="middle" font-size="11" fill="#6b7280">read</text>
+
+  <!-- ============ LANE B: INGEST + PROCESS ============ -->
+  <!-- VPC container -->
+  <rect x="28" y="312" width="206" height="216" rx="10" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="40" y="332" font-size="11" fill="#64748b">VPC · public subnets · no NAT</text>
+
+  <!-- EC2 worker -->
+  <rect x="48" y="352" width="166" height="120" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="131" y="382" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">EC2 ingest worker</text>
+  <text x="131" y="402" text-anchor="middle" font-size="11.5" fill="#4b5563">t3.micro · Amazon Linux</text>
+  <text x="131" y="418" text-anchor="middle" font-size="11.5" fill="#4b5563">daily cron 02:00 UTC</text>
+  <text x="131" y="434" text-anchor="middle" font-size="11.5" fill="#4b5563">downloads review data</text>
+
+  <!-- S3 data lake -->
+  <rect x="284" y="352" width="170" height="120" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="369" y="382" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">S3 data lake</text>
+  <text x="369" y="402" text-anchor="middle" font-size="11.5" fill="#4b5563">raw JSON batches</text>
+  <text x="369" y="418" text-anchor="middle" font-size="11.5" fill="#4b5563">90-day lifecycle</text>
+
+  <!-- SQS -->
+  <rect x="504" y="352" width="150" height="120" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="579" y="382" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">SQS</text>
+  <text x="579" y="402" text-anchor="middle" font-size="11.5" fill="#4b5563">ingest queue</text>
+
+  <!-- DLQ -->
+  <rect x="504" y="500" width="150" height="64" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="579" y="524" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">SQS DLQ</text>
+  <text x="579" y="542" text-anchor="middle" font-size="11.5" fill="#4b5563">poison batches</text>
+
+  <!-- Processor Lambda -->
+  <rect x="700" y="352" width="110" height="120" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="755" y="382" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">Processor</text>
+  <text x="755" y="400" text-anchor="middle" font-size="12" fill="#4b5563">Lambda</text>
+  <text x="755" y="418" text-anchor="middle" font-size="11.5" fill="#4b5563">Python 3.12</text>
+
+  <!-- Bedrock -->
+  <rect x="700" y="500" width="110" height="64" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="755" y="524" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">Bedrock</text>
+  <text x="755" y="542" text-anchor="middle" font-size="11.5" fill="#4b5563">Haiku</text>
+
+  <!-- Lane B arrows -->
+  <line x1="214" y1="404" x2="280" y2="404" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="247" y="394" text-anchor="middle" font-size="11" fill="#6b7280">raw JSON</text>
+  <path d="M 131 472 V 505 H 579 V 476" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="355" y="500" text-anchor="middle" font-size="11" fill="#6b7280">batch messages</text>
+  <line x1="579" y1="472" x2="579" y2="496" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <text x="588" y="490" font-size="10.5" fill="#6b7280">after 3 fails</text>
+  <line x1="654" y1="412" x2="696" y2="412" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="675" y="402" text-anchor="middle" font-size="10.5" fill="#6b7280">event trigger</text>
+  <line x1="755" y1="472" x2="755" y2="496" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="764" y="490" font-size="10.5" fill="#6b7280">InvokeModel</text>
+  <line x1="810" y1="412" x2="826" y2="412" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="818" y="402" text-anchor="middle" font-size="11" fill="#6b7280">write</text>
+  <path d="M 369 352 V 318 H 755 V 348" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <text x="562" y="310" text-anchor="middle" font-size="11" fill="#6b7280">read raw batches</text>
+
+  <!-- ============ LANE C: OPERATE ============ -->
+  <!-- Budgets -->
+  <rect x="40" y="650" width="150" height="80" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="115" y="680" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">AWS Budgets</text>
+  <text x="115" y="700" text-anchor="middle" font-size="11.5" fill="#4b5563">$5/mo · alert at 80%</text>
+
+  <!-- CloudWatch -->
+  <rect x="240" y="650" width="180" height="80" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="330" y="680" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">CloudWatch</text>
+  <text x="330" y="700" text-anchor="middle" font-size="11.5" fill="#4b5563">alarms: Lambda errors,</text>
+  <text x="330" y="715" text-anchor="middle" font-size="11.5" fill="#4b5563">DLQ depth, API 5xx</text>
+
+  <!-- EventBridge -->
+  <rect x="700" y="650" width="110" height="80" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="755" y="680" text-anchor="middle" font-size="13" font-weight="bold" fill="#111827">EventBridge</text>
+  <text x="755" y="700" text-anchor="middle" font-size="11.5" fill="#4b5563">nightly 03:00 UTC</text>
+
+  <!-- CDK -->
+  <rect x="830" y="650" width="200" height="80" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="930" y="680" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">CDK · TypeScript</text>
+  <text x="930" y="700" text-anchor="middle" font-size="11.5" fill="#4b5563">one stack · least-privilege IAM</text>
+
+  <!-- Lane C arrows -->
+  <path d="M 695 650 V 412 H 700" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <text x="688" y="540" text-anchor="end" font-size="10.5" fill="#6b7280">nightly recompute</text>
+  <path d="M 330 650 C 420 630 500 600 555 566" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <path d="M 370 650 C 470 600 600 520 690 450" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <path d="M 410 650 C 540 540 585 360 560 227" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <text x="470" y="612" text-anchor="middle" font-size="11" fill="#6b7280">alarms</text>
+
+  <!-- Legend -->
+  <line x1="40" y1="806" x2="80" y2="806" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="88" y="810" font-size="12" fill="#4b5563">live data flow</text>
+  <line x1="230" y1="806" x2="270" y2="806" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <text x="278" y="810" font-size="12" fill="#4b5563">async / ops / future</text>
+  <rect x="450" y="796" width="26" height="20" rx="4" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="484" y="810" font-size="12" fill="#4b5563">pending AWS verification</text>
+</svg>

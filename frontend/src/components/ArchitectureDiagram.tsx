@@ -1,19 +1,21 @@
+import architectureSvg from './architecture.svg';
+
 /**
- * Placeholder for the architecture diagram.
- *
- * TODO: replace with the real diagram (export from your drawing tool as SVG
- * and drop it in src/assets/architecture.svg, then render it here).
- * The canonical sketch lives in the parent agent's chat widget and in
- * DESIGN_SKETCH.md at the workspace root.
+ * Renders the ReviewIntel system architecture diagram.
+ * The diagram source lives in ./architecture.svg (also copied to docs/
+ * at the repo root for the README).
  */
 export default function ArchitectureDiagram() {
   return (
-    <div className="diagram-placeholder">
-      <strong>Architecture diagram goes here</strong>
-      <p>
-        EC2 worker → S3 + SQS → Lambda + Bedrock → DynamoDB → API Gateway + Lambda
-        → React on S3/CloudFront. Ops: EventBridge, CloudWatch, CDK.
-      </p>
-    </div>
+    <figure className="architecture-diagram">
+      <img
+        src={architectureSvg}
+        alt="ReviewIntel system architecture: EC2 ingest worker to S3 and SQS, Lambda plus Bedrock into DynamoDB, served by API Gateway and a React dashboard on S3, with EventBridge, CloudWatch, and budget ops"
+      />
+      <figcaption>
+        Live deployment in us-east-1. CloudFront is pending AWS account
+        verification and is not yet serving traffic.
+      </figcaption>
+    </figure>
   );
 }

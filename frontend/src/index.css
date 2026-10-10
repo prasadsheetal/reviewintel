@@ -80,6 +80,26 @@ header p {
   margin-top: 32px;
 }
 
+.architecture-diagram {
+  margin: 32px 0 0;
+  max-width: 1080px;
+}
+
+.architecture-diagram img {
+  width: 100%;
+  height: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.architecture-diagram figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
 .back-btn {
   margin-bottom: 12px;
   cursor: pointer;

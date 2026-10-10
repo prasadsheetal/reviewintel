@@ -8,15 +8,22 @@ excellence from day one.
 
 ## Architecture
 
+![ReviewIntel architecture](docs/architecture.svg)
+
 ```
 [Review dataset] --cron--> [EC2 t3.micro worker] --raw JSON--> [S3 data lake]
                                                         \--> [SQS queue]
 [SQS] --event--> [Lambda: processor] --Bedrock Haiku--> [DynamoDB single table]
-[React dashboard] <--CloudFront-- [S3 site bucket]
+[React dashboard] <--S3 website hosting-- [S3 site bucket]
 [API Gateway] --> [Lambda: api] --> [DynamoDB]
 [EventBridge: nightly 03:00 UTC] --> [Lambda: processor] (recompute)
 [CloudWatch alarms] watches Lambda errors + DLQ depth
 ```
+
+> Note: CloudFront is not deployed yet — new AWS accounts need manual
+> account verification before creating distributions (support case filed).
+> The dashboard is served from S3 website hosting until then; the stack
+> re-enables CloudFront with `npx cdk deploy` (default) once verified.
 
 Data model (single table):
 - `PK=PRODUCT#<id>`, `SK=REVIEW#<id>` — one item per processed review
