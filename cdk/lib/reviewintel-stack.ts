@@ -45,7 +45,13 @@ export class ReviewIntelStack extends cdk.Stack {
 
     // ------------------------------------------------------------------
     // 2. S3: raw data lake + static frontend hosting.
+    //
+    // CloudFront can be disabled for accounts that AWS has not verified yet
+    // (new accounts get "account must be verified" on distributions):
+    //   npx cdk deploy -c enableCloudfront=false
+    // The site is then served from S3 website hosting instead.
     // ------------------------------------------------------------------
+    const enableCloudfront = this.node.tryGetContext('enableCloudfront') !== 'false';
     const rawBucket = new s3.Bucket(this, 'RawDataLake', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -56,11 +62,27 @@ export class ReviewIntelStack extends cdk.Stack {
     });
 
     const siteBucket = new s3.Bucket(this, 'SiteBucket', {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      // Website hosting needs a public bucket policy; CloudFront path stays private via OAC.
+      blockPublicAccess: enableCloudfront
+        ? s3.BlockPublicAccess.BLOCK_ALL
+        : s3.BlockPublicAccess.BLOCK_ACLS,
+      websiteIndexDocument: enableCloudfront ? undefined : 'index.html',
+      websiteErrorDocument: enableCloudfront ? undefined : 'index.html', // SPA fallback
       encryption: s3.BucketEncryption.S3_MANAGED,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
+
+    if (!enableCloudfront) {
+      // Public read for the S3-website-hosted dashboard (demo only).
+      siteBucket.addToResourcePolicy(
+        new iam.PolicyStatement({
+          actions: ['s3:GetObject'],
+          resources: [siteBucket.arnForObjects('*')],
+          principals: [new iam.AnyPrincipal()],
+        }),
+      );
+    }
 
     // ------------------------------------------------------------------
     // 3. SQS: ingest queue with a dead-letter queue for poison batches.
@@ -153,22 +175,26 @@ export class ReviewIntelStack extends cdk.Stack {
 
     // ------------------------------------------------------------------
     // 7. CloudFront distribution for the React dashboard (S3 origin, OAC).
+    //    Skipped when enableCloudfront=false (unverified new accounts).
     // ------------------------------------------------------------------
-    const distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
-      defaultRootObject: 'index.html',
-      defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      },
-      // SPA fallback so client-side routes work on refresh.
-      errorResponses: [
-        {
-          httpStatus: 404,
-          responseHttpStatus: 200,
-          responsePagePath: '/index.html',
+    let distribution: cloudfront.Distribution | undefined;
+    if (enableCloudfront) {
+      distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
+        defaultRootObject: 'index.html',
+        defaultBehavior: {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
-      ],
-    });
+        // SPA fallback so client-side routes work on refresh.
+        errorResponses: [
+          {
+            httpStatus: 404,
+            responseHttpStatus: 200,
+            responsePagePath: '/index.html',
+          },
+        ],
+      });
+    }
 
     // ------------------------------------------------------------------
     // 8. EventBridge: nightly recompute pass at 03:00 UTC.
@@ -250,7 +276,11 @@ export class ReviewIntelStack extends cdk.Stack {
     // 11. Outputs.
     // ------------------------------------------------------------------
     new cdk.CfnOutput(this, 'ApiUrl', { value: api.url });
-    new cdk.CfnOutput(this, 'SiteUrl', { value: `https://${distribution.distributionDomainName}` });
+    new cdk.CfnOutput(this, 'SiteUrl', {
+      value: enableCloudfront && distribution
+        ? `https://${distribution.distributionDomainName}`
+        : siteBucket.bucketWebsiteUrl,
+    });
     new cdk.CfnOutput(this, 'SiteBucketName', { value: siteBucket.bucketName });
     new cdk.CfnOutput(this, 'RawBucketName', { value: rawBucket.bucketName });
     new cdk.CfnOutput(this, 'IngestQueueUrl', { value: ingestQueue.queueUrl });
