@@ -1,116 +1,124 @@
 # ReviewIntel
 
-AI-powered product review intelligence on AWS. Ingests product reviews, generates
-sentiment and aspect-level summaries with Amazon Bedrock, and serves them through
-a React dashboard. Built as a portfolio project for Amazon SDE-1 readiness:
-event-driven, single-table DynamoDB, infrastructure as code, operational
-excellence from day one.
+AI-powered product review intelligence. Ingests product reviews, classifies
+sentiment and extracts aspect-level insights (quality, shipping, value) with a
+large language model, then serves live summaries through a fast read API and a
+React dashboard.
+
+## Live demo
+
+- **Dashboard:** http://reviewintelstack-sitebucket397a1860-9yhfmmtei1rr.s3-website-us-east-1.amazonaws.com
+- **API:** https://34r6afhfx3.execute-api.us-east-1.amazonaws.com/prod/products
+
+> Note: the dashboard is served over HTTP for now. A CloudFront distribution
+> (HTTPS + CDN) is queued behind AWS's new-account verification and will
+> replace this URL once approved.
+
+## What it does
+
+- **Product sentiment overview:** every product shows positive / neutral /
+  negative review counts and an overall sentiment verdict.
+- **Aspect-level summaries:** the model distills what reviewers say about
+  quality, shipping, and value into short readable summaries.
+- **Faceted browsing:** a DynamoDB global secondary index supports
+  browse-by-sentiment queries.
+- **Always fresh:** an ingest worker pulls new reviews on a schedule, and a
+  nightly job recomputes product summaries automatically.
+
+## How it works
+
+1. An EC2 worker downloads review data on a cron schedule and writes raw JSON
+   to S3, then enqueues each batch on SQS.
+2. A Lambda function consumes the queue, calls Amazon Bedrock (Claude Haiku)
+   for sentiment classification and aspect summarization, and writes results
+   to a single DynamoDB table.
+3. API Gateway + a read Lambda serve product summaries with an in-memory
+   cache for hot products.
+4. A React dashboard renders the summaries, sentiment breakdowns, and this
+   architecture.
+
+Poison-pill batches go to a dead-letter queue after 3 retries; CloudWatch
+alarms watch Lambda errors, DLQ depth, and API 5xx rates.
 
 ## Architecture
 
 ![ReviewIntel architecture](docs/architecture.svg)
 
-```
-[Review dataset] --cron--> [EC2 t3.micro worker] --raw JSON--> [S3 data lake]
-                                                        \--> [SQS queue]
-[SQS] --event--> [Lambda: processor] --Bedrock Haiku--> [DynamoDB single table]
-[React dashboard] <--S3 website hosting-- [S3 site bucket]
-[API Gateway] --> [Lambda: api] --> [DynamoDB]
-[EventBridge: nightly 03:00 UTC] --> [Lambda: processor] (recompute)
-[CloudWatch alarms] watches Lambda errors + DLQ depth
-```
+Data model (single-table DynamoDB):
 
-> Note: CloudFront is not deployed yet — new AWS accounts need manual
-> account verification before creating distributions (support case filed).
-> The dashboard is served from S3 website hosting until then; the stack
-> re-enables CloudFront with `npx cdk deploy` (default) once verified.
-
-Data model (single table):
 - `PK=PRODUCT#<id>`, `SK=REVIEW#<id>` — one item per processed review
 - `PK=PRODUCT#<id>`, `SK=SUMMARY` — aggregated product summary
-- GSI `SentimentIndex`: `sentiment` (PK), `SK` — faceted browsing by sentiment
+- GSI `SentimentIndex` — query products by sentiment
 
-## Free-tier cost table
+## Tech stack
 
-| Service | Free tier | This project |
+AWS CDK (TypeScript) · Lambda (Python) · API Gateway · DynamoDB · SQS ·
+S3 · EC2 · EventBridge · CloudWatch · Amazon Bedrock · React + TypeScript (Vite)
+
+## Design decisions
+
+- **Single-table DynamoDB** keeps product, review, and summary data in one
+  table with one GSI, so reads stay cheap and access patterns stay explicit.
+- **Event-driven ingest** (S3 + SQS + Lambda) decouples download, processing,
+  and serving, so each stage scales and retries independently.
+- **No NAT gateway, no ElastiCache.** The worker runs in a public subnet and
+  the API Lambda caches hot products in memory. This keeps the demo near
+  free-tier limits without sacrificing the architecture story.
+- **Infrastructure as code from day one:** the entire stack is one CDK app,
+  one deploy command, least-privilege IAM throughout.
+
+## Performance
+
+Load test against the live API (200 requests, 20 concurrent workers):
+
+| Metric | Cold start | Warm |
 |---|---|---|
-| EC2 t3.micro | 750 hrs/mo, 12 mo | One worker, destroy when not demoing |
-| Lambda | 1M req + 400k GB-s/mo, always | Two functions, well under limits |
-| DynamoDB | 25 GB + 25 RCU/WCU, always | Pay-per-request, tiny dataset |
-| SQS | 1M req/mo, always | One queue + DLQ |
-| S3 | 5 GB, 12 mo | Two small buckets |
-| API Gateway | 1M calls/mo, 12 mo | Read API |
-| CloudFront | 1 TB + 10M req/mo | Static dashboard |
-| CloudWatch | 10 metrics/alarms | 3 alarms |
-| EventBridge | Scheduled rules free | One nightly rule |
-| IAM | Always free | Least-privilege roles |
+| Success rate | 95% | 100% |
+| p50 latency | 1302 ms | 1350 ms |
+| p95 latency | 2892 ms | 2006 ms |
+| p99 latency | 3200 ms | 2064 ms |
 
-Deliberately NOT deployed: NAT gateway (~$32/mo — worker uses a public
-subnet), ElastiCache (no free tier — in-memory cache in the API Lambda
-instead), Route 53 domain ($0.50/mo — CloudFront default URL).
+Latency is dominated by Lambda cold starts under burst concurrency (~1s per
+fresh Python environment), not the database. Next steps in order of leverage:
+provisioned concurrency on the read Lambda, then a managed cache layer.
+Full results in `loadtest/results.md`; the k6 smoke script is in
+`loadtest/smoke.js`.
 
-Bedrock is pay-per-token; a demo's worth of Haiku summaries costs a few cents.
-Process each review once and cache results.
+## Run it yourself
 
-## Prerequisites
-
-- AWS account with Free Tier available (check Billing > Free Tier)
-- AWS CLI configured (`aws configure`) — credentials stay on your machine,
-  never in this repo
-- Node.js 20+, Python 3.12+, AWS CDK (`npm install -g aws-cdk`)
-- Bedrock model access enabled for the Haiku model in your region
-  (Console > Bedrock > Model access)
-
-## Deploy
+Prerequisites: an AWS account, AWS CLI configured, Node.js 20+, Python 3.12+,
+AWS CDK, and Bedrock model access for Claude Haiku in your region.
 
 ```bash
-make install     # install CDK, frontend, and Python deps
-make synth       # sanity-check the CloudFormation template (no creds needed)
+make install     # install CDK, frontend, and Python dependencies
+make synth       # sanity-check the CloudFormation template
 make deploy      # build frontend + deploy stack + sync site to S3
 ```
 
-After deploy, the CloudFront URL is printed and also in stack outputs
-(`SiteUrl`, `ApiUrl`).
+The site and API URLs print after deploy (also in stack outputs `SiteUrl`
+and `ApiUrl`). Set a small billing budget in the console after your first
+deploy.
 
-Set a $5 billing budget with an 80% alert in the console after first deploy.
-
-## Teardown (important)
-
-The EC2 worker burns free-tier hours while running. When not demoing:
+To stop the EC2 worker burning free-tier hours when you are not demoing:
 
 ```bash
 make destroy
 ```
 
-## k6 load-test plan
+## Cost
 
-Target: the read path (`GET /products`, `GET /products/{id}/summary`).
-
-1. `k6 run loadtest/smoke.js` with `API_URL` set to the deployed API.
-2. Stages: 30s ramp to 20 VUs, 2m steady, 30s ramp-down.
-3. Record p50/p95 latency and error rate; paste results into the README table
-   below. Expect p95 < 500ms at 20 VUs on pay-per-request DynamoDB.
-
-| Endpoint | VUs | p50 | p95 | Errors |
-|---|---|---|---|---|
-| GET /products + /products/{id}/summary (mixed) | 20 | 1350ms | 2006ms | 0% (warm); 5% on cold start |
-
-Measured 2026-10-10 against the live API with 200 requests at 20 concurrent
-workers (Python harness; k6 smoke script in `loadtest/smoke.js` covers the same
-endpoints). p99 was 2064ms. Latency is dominated by Lambda cold starts: each
-concurrent execution spins up a fresh Python+boto3 environment (~1s), so p50
-tracks cold-start time under burst concurrency rather than DynamoDB (the table
-holds 3 items; scans are single-digit ms). Production mitigations, in order of
-leverage: provisioned concurrency for the read Lambda, then the ElastiCache
-layer from the design doc. Full numbers in `loadtest/results.md`.
+Designed to sit inside AWS Free Tier: one t3.micro worker, two Lambdas, one
+on-demand DynamoDB table, one SQS queue + DLQ, two S3 buckets, API Gateway,
+EventBridge, CloudWatch alarms, and a $5 monthly budget with an 80% alert.
+Bedrock is pay-per-token; a demo's worth of summaries costs a few cents.
 
 ## Project layout
 
-- `cdk/` — TypeScript CDK app (VPC, S3, SQS, DynamoDB, Lambdas, API Gateway,
-  CloudFront, EventBridge, CloudWatch alarms, IAM)
-- `lambdas/processor/` — SQS consumer: Bedrock summarization → DynamoDB
-- `lambdas/api/` — API Gateway handler: product list + summaries
-- `worker/` — EC2 ingest worker (user-data + Python cron job)
+- `cdk/` — TypeScript CDK app: VPC, S3, SQS, DynamoDB, Lambdas, API Gateway,
+  CloudFront, EventBridge, CloudWatch alarms, IAM
+- `lambdas/processor/` — SQS consumer: Bedrock summarization to DynamoDB
+- `lambdas/api/` — API Gateway handler: product list and summaries
+- `worker/` — EC2 ingest worker (user data + Python cron job)
 - `frontend/` — Vite + React + TypeScript dashboard
-- `loadtest/` — k6 smoke script
-- `DESIGN_DOC.md` — narrative design doc (Amazon style)
+- `loadtest/` — k6 smoke script and measured results
+- `DESIGN_DOC.md` — narrative design document
