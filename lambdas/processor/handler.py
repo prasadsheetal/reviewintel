@@ -23,7 +23,7 @@ logger.setLevel(logging.INFO)
 TABLE_NAME = os.environ["TABLE_NAME"]
 RAW_BUCKET_NAME = os.environ.get("RAW_BUCKET_NAME", "")
 BEDROCK_MODEL_ID = os.environ.get(
-    "BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0"
+    "BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 )
 
 dynamodb = boto3.resource("dynamodb")

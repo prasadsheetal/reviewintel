@@ -127,7 +127,9 @@ export class ReviewIntelStack extends cdk.Stack {
         TABLE_NAME: table.tableName,
         RAW_BUCKET_NAME: rawBucket.bucketName,
         // Cheapest capable model; override per-region if needed.
-        BEDROCK_MODEL_ID: 'anthropic.claude-3-haiku-20240307-v1:0',
+        // Claude 3 Haiku reached end of life; Haiku 4.5 is invoked through
+        // the US cross-region inference profile (on-demand requires it).
+        BEDROCK_MODEL_ID: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
       },
     });
     processor.addEventSource(
@@ -140,7 +142,13 @@ export class ReviewIntelStack extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ['bedrock:InvokeModel'],
         resources: [
-          `arn:aws:bedrock:${this.region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0`,
+          // The inference profile itself (in this region/account) plus the
+          // underlying foundation model in every region the US profile can
+          // route to.
+          `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0`,
+          'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
+          'arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
+          'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0',
         ],
       }),
     );
