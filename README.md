@@ -7,12 +7,11 @@ React dashboard.
 
 ## Live demo
 
-- **Dashboard:** http://reviewintelstack-sitebucket397a1860-9yhfmmtei1rr.s3-website-us-east-1.amazonaws.com
+- **Dashboard:** https://d7wzs89j0s8rt.cloudfront.net
 - **API:** https://34r6afhfx3.execute-api.us-east-1.amazonaws.com/prod/products
 
-> Note: the dashboard is served over HTTP for now. A CloudFront distribution
-> (HTTPS + CDN) is queued behind AWS's new-account verification and will
-> replace this URL once approved.
+> The dashboard is served over HTTPS through a CloudFront distribution
+> in front of a private S3 origin (Origin Access Control).
 
 ## What it does
 

@@ -10,7 +10,7 @@
 
   <!-- Title -->
   <text x="24" y="30" font-size="22" font-weight="bold" fill="#111827">ReviewIntel — system architecture</text>
-  <text x="24" y="54" font-size="13" fill="#6b7280">Live in us-east-1 · free-tier design · CloudFront pending AWS account verification (dashed box)</text>
+  <text x="24" y="54" font-size="13" fill="#6b7280">Live in us-east-1 · free-tier design · served over HTTPS via CloudFront</text>
 
   <!-- Lane separators + labels -->
   <line x1="24" y1="280" x2="1056" y2="280" stroke="#e5e7eb"/>
@@ -24,11 +24,11 @@
   <rect x="40" y="163" width="110" height="60" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
   <text x="95" y="197" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">Users</text>
 
-  <!-- CloudFront (pending) -->
-  <rect x="200" y="78" width="200" height="52" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="7 5"/>
-  <text x="300" y="99" text-anchor="middle" font-size="13" font-weight="bold" fill="#6b7280">CloudFront (CDN)</text>
+  <!-- CloudFront -->
+  <rect x="200" y="78" width="200" height="52" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="300" y="99" text-anchor="middle" font-size="13" font-weight="bold" fill="#1f2937">CloudFront (CDN)</text>
   <text x="300" y="117" text-anchor="middle" font-size="11" font-style="italic" fill="#9ca3af">pending account verification</text>
-  <line x1="300" y1="130" x2="300" y2="144" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrowGray)"/>
+  <line x1="300" y1="130" x2="300" y2="144" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrowGray)"/>
 
   <!-- React dashboard on S3 -->
   <rect x="200" y="148" width="200" height="92" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
